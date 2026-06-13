@@ -1,13 +1,12 @@
 package eu.gitonyx.gitonyx.model;
 
-import eu.gitonyx.gitonyx.annotation.database.Column;
-import eu.gitonyx.gitonyx.annotation.database.ColumnType;
-import eu.gitonyx.gitonyx.annotation.database.Table;
+import de.tnttastisch.polydb.core.annotations.*;
 
-@Table("users")
+@Entity
+@Table(name = "users")
 public class UserModel {
     
-    @Column(name = "id", type = ColumnType.INT, nullable = false, unique = true)
+    @Column(name = "id", nullable = false, unique = true)
     private int id;
 
     @Column(name = "username", nullable = false, unique = true, length = 32)
