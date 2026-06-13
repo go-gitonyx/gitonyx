@@ -5,17 +5,8 @@ import java.lang.reflect.Field;
 import org.json.JSONObject;
 
 public class ModelHandler {
-    
-    public <T> T loadById(Class<T> clazz, int id) {
-        try {
-            return clazz.getConstructor().newInstance();
-        } catch (Exception exception) {
-            exception.printStackTrace();
-        }
-        return null;
-    }
 
-    public <T> JSONObject parseObject(T instance) {
+    public static <T> JSONObject parseObject(T instance) {
         JSONObject jsonObject = new JSONObject();
 
         for (Field field : instance.getClass().getDeclaredFields()) {

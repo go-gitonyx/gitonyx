@@ -1,7 +1,13 @@
 package eu.gitonyx.gitonyx.route.user;
 
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.util.Optional;
+import java.util.UUID;
+
 import org.json.JSONObject;
 
+import de.tnttastisch.polydb.query.Repository;
 import eu.gitonyx.gitonyx.annotation.http.Parent;
 import eu.gitonyx.gitonyx.annotation.http.type.GET;
 import eu.gitonyx.gitonyx.annotation.http.type.DELETE;
@@ -16,22 +22,22 @@ import eu.gitonyx.gitonyx.model.UserModel;
 @Parent("/user")
 public class UserRoute {
 
-    private final ModelHandler modelHandler;
+    private final Repository<UserModel> userRepository;
 
-    public UserRoute(ModelHandler modelHandler) {
-        this.modelHandler = modelHandler;
+    public UserRoute(Repository<UserModel> userRepository) {
+        this.userRepository = userRepository;
     }
 
     @GET("/info")
     public Response userInfo(Request request) {
-        int id = request.json().getInt("id");
+        var id = request.json().get("id");
 
-        UserModel user = this.modelHandler.loadById(UserModel.class, id);
-        if (user == null) {
+        Optional<UserModel> user = this.userRepository.findById(id);
+        if (user == null || user.isEmpty()) {
             return Response.notFound("User not found");
         }
 
-        JSONObject jsonObject = this.modelHandler.parseObject(user);
+        JSONObject jsonObject = ModelHandler.parseObject(user.get());
         if (jsonObject == null) {
             return Response.notFound("User object not found");
         }
@@ -41,9 +47,30 @@ public class UserRoute {
     
     @PUT("/register")
     public Response userRegister(Request request) {
+        var id = UUID.randomUUID();
+        var username = request.json().getString("username");
+        var email = request.json().getString("email");
+        var firstName = request.json().getString("firstName");
+        var lastName = request.json().getString("lastName");
+        var createdAt = Timestamp.valueOf(LocalDateTime.now());
 
+        UserModel user = new UserModel();
 
-        return new Response().statusCode(200);
+        user.setId(id);
+        user.setUsername(username);
+        user.setEmail(email);
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
+        user.setCreatedAt(createdAt);
+
+        this.userRepository.save(user);
+
+        JSONObject jsonObject = ModelHandler.parseObject(user);
+        if (jsonObject == null) {
+            return Response.notFound("User object not found");
+        }
+
+        return new Response().json(jsonObject).statusCode(201);
     }
     
     @POST("/login")

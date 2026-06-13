@@ -66,3 +66,7 @@ bin/
 # OS
 .DS_Store
 Thumbs.db
+
+# TEST #
+db/
+config.json
