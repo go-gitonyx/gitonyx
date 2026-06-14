@@ -1,12 +1,19 @@
 package eu.gitonyx.gitonyx;
 
+import java.nio.file.Paths;
+
+import de.eztxm.blatt.core.HeadConfig;
+import de.eztxm.blatt.http.BlattServer;
+import de.eztxm.blatt.routing.RouteScanner;
+import de.eztxm.blatt.routing.Router;
 import de.tnttastisch.polydb.PolyDB;
 import de.tnttastisch.polydb.query.Repository;
 import eu.gitonyx.gitonyx.config.DatabaseConfig;
 import eu.gitonyx.gitonyx.factory.ConfigFactory;
 import eu.gitonyx.gitonyx.model.UserModel;
-import eu.gitonyx.gitonyx.route.Router;
+import eu.gitonyx.gitonyx.route.OnyxRouter;
 import eu.gitonyx.gitonyx.route.user.UserRoute;
+import eu.gitonyx.gitonyx.session.SessionStore;
 
 public class GitOnyx {
 
@@ -14,7 +21,8 @@ public class GitOnyx {
     private PolyDB polyDB;
 
     private Repository<UserModel> userRepository;
-    private Router router;
+    private OnyxRouter router;
+    private final SessionStore sessionStore = new SessionStore();
 
     public GitOnyx() {
         try {
@@ -32,7 +40,8 @@ public class GitOnyx {
                     .start();
 
             this.registerModels();
-            this.registerRoutes();
+            new Thread(this::registerRoutes).start();
+            this.setupFrontend();
         } catch (Exception exception) {
             exception.printStackTrace();
         }
@@ -43,9 +52,25 @@ public class GitOnyx {
     }
 
     private void registerRoutes() {
-        this.router = new Router("/api/v1");
-        this.router.registerRoutes(new UserRoute(this.userRepository));
-        this.router.start(7070);
+        this.router = new OnyxRouter("/api/v1");
+        this.router.registerRoutes(new UserRoute(this.userRepository, this.sessionStore));
+        this.router.start(3493);
+    }
+
+    private void setupFrontend() {
+        Router router = new Router()
+                .staticFiles(Paths.get("public"));
+
+        new RouteScanner("eu.gitonyx.gitonyx.pages").scan(router);
+
+        HeadConfig headConfig = new HeadConfig()
+                .lang("en")
+                .title("GitOnyx")
+                .stylesheet("/style.css")
+                .script("/auth.js")
+                .script("/dashboard.js");
+
+        new BlattServer(router, headConfig, 3492).start();
     }
 
     private String dbConfigToJdbc(DatabaseConfig databaseConfig) {

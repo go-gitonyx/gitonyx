@@ -2,16 +2,16 @@ package eu.gitonyx.gitonyx.http;
 
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 
 public class Response {
 
     private int code = 200;
     private String body = null;
     private String contentType = "application/json";
-    private final Map<String, String> headers = new HashMap<>();
+    private final List<String[]> headers = new ArrayList<>();
 
     public Response() {}
 
@@ -53,7 +53,7 @@ public class Response {
     }
 
     public Response header(String key, String value) {
-        headers.put(key, value);
+        headers.add(new String[]{key, value});
         return this;
     }
 
@@ -66,8 +66,8 @@ public class Response {
         return contentType;
     }
 
-    public Map<String, String> headers() {
-        return Collections.unmodifiableMap(headers);
+    public List<String[]> headers() {
+        return Collections.unmodifiableList(headers);
     }
 
     public static Response ok() {

@@ -5,6 +5,7 @@ import eu.gitonyx.gitonyx.annotation.http.type.*;
 import eu.gitonyx.gitonyx.http.Request;
 import eu.gitonyx.gitonyx.http.Response;
 import io.javalin.Javalin;
+import io.javalin.apibuilder.ApiBuilder;
 import io.javalin.http.Context;
 import io.javalin.http.Handler;
 
@@ -12,7 +13,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Router {
+public class OnyxRouter {
 
     private enum HttpMethod { GET, POST, PUT, PATCH, DELETE }
     private record RouteEntry(HttpMethod method, String path, Handler handler) {}
@@ -21,7 +22,7 @@ public class Router {
     private final List<RouteEntry> pendingRoutes = new ArrayList<>();
     private Javalin app;
 
-    public Router(String version) {
+    public OnyxRouter(String version) {
         this.version = version;
     }
 
@@ -32,16 +33,26 @@ public class Router {
     }
 
     public void start(int port) {
+        List<RouteEntry> routes = List.copyOf(pendingRoutes);
+
         this.app = Javalin.create(config -> {
-            for (RouteEntry entry : pendingRoutes) {
-                switch (entry.method()) {
-                    case GET    -> config.routes.get(entry.path(), entry.handler());
-                    case POST   -> config.routes.post(entry.path(), entry.handler());
-                    case PUT    -> config.routes.put(entry.path(), entry.handler());
-                    case PATCH  -> config.routes.patch(entry.path(), entry.handler());
-                    case DELETE -> config.routes.delete(entry.path(), entry.handler());
+            config.bundledPlugins.enableCors(cors ->
+                cors.addRule(rule -> {
+                    rule.reflectClientOrigin = true;
+                    rule.allowCredentials = true;
+                })
+            );
+            config.routes.apiBuilder(() -> {
+                for (RouteEntry entry : routes) {
+                    switch (entry.method()) {
+                        case GET    -> ApiBuilder.get(entry.path(), entry.handler());
+                        case POST   -> ApiBuilder.post(entry.path(), entry.handler());
+                        case PUT    -> ApiBuilder.put(entry.path(), entry.handler());
+                        case PATCH  -> ApiBuilder.patch(entry.path(), entry.handler());
+                        case DELETE -> ApiBuilder.delete(entry.path(), entry.handler());
+                    }
                 }
-            }
+            });
         }).start(port);
     }
 
@@ -90,7 +101,7 @@ public class Router {
 
         Response response = (Response) method.invoke(route, request);
 
-        response.headers().forEach(ctx::header);
+        for (String[] h : response.headers()) ctx.header(h[0], h[1]);
         ctx.status(response.code());
         ctx.contentType(response.contentType());
         if (response.body() != null) {
